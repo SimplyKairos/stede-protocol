@@ -1,7 +1,25 @@
-.env
+# Build artifacts
 target/
-node_modules/
 .anchor/
+node_modules/
+yarn-error.log
+
+# Environment / credentials — NEVER commit
+.env
+.env.*
+*.keypair.json
+*-keypair.json
+**/devnet-*.json
+**/mainnet-*.json
+~/.config/solana/
+
+# IDE / OS
 .DS_Store
-dist/
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
 *.log
+logs/
