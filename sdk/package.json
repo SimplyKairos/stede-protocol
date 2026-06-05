@@ -3,6 +3,11 @@
   "version": "0.3.5",
   "description": "TypeScript SDK for the Stede protocol — consumer money rules on Solana.",
   "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SimplyKairos/stede-protocol.git",
+    "directory": "sdk"
+  },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
