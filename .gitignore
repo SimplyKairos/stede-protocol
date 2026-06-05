@@ -3,6 +3,8 @@ target/
 .anchor/
 node_modules/
 yarn-error.log
+dist/
+sdk/dist/
 
 # Environment / credentials — NEVER commit
 .env

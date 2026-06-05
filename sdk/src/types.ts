@@ -36,12 +36,52 @@ export interface BlockListRecord {
   count: number;
 }
 
+/** Cool-off rule state. */
+export interface CooloffRecord {
+  /** Transfers at or above this amount trigger the cool-off timer. */
+  threshold: BN;
+  /** How long the cool-off lasts, in seconds. */
+  durationSeconds: BN;
+  /** Unix timestamp of the most recent large transfer. */
+  lastLargeTransferAt: BN;
+}
+
+/** Slow Send (new recipient delay) config state. */
+export interface SlowSendRecord {
+  /** How long a newly-registered recipient must age before transfers, in seconds. */
+  delaySeconds: BN;
+}
+
+/** Night Mode (time window) config state. */
+export interface NightModeRecord {
+  /** Hour (0-23 UTC) the blocked window starts. */
+  startHour: number;
+  /** Hour (0-23 UTC) the blocked window ends. */
+  endHour: number;
+}
+
+/** Friend Gate config state. */
+export interface FriendGateRecord {
+  /** Transfers at or above this amount require the friend's co-signature. */
+  threshold: BN;
+  /** The designated co-signer wallet. */
+  friendWallet: PublicKey;
+}
+
 /** Aggregated rule state for a sender on a given Stede mint. */
 export interface SenderRules {
-  /** Daily limit, or null if the sender hasn't set one. */
+  /** Daily limit, or null if not set. */
   dailyLimit: DailyLimitRecord | null;
   /** Block list, or null if empty/uninitialized. */
   blockList: BlockListRecord | null;
+  /** Cool-off, or null if not set. */
+  cooloff: CooloffRecord | null;
+  /** Slow Send, or null if not set. */
+  slowSend: SlowSendRecord | null;
+  /** Night Mode, or null if not set. */
+  nightMode: NightModeRecord | null;
+  /** Friend Gate, or null if not set. */
+  friendGate: FriendGateRecord | null;
 }
 
 /** A Stede vault tied to a specific underlying stablecoin mint. */
@@ -62,8 +102,18 @@ export interface VaultRecord {
 
 /** Result of a transfer preview (does this transfer pass all rules?). */
 export interface TransferPreview {
-  /** True if all rules approve this transfer. */
+  /** True if the simulated transfer would succeed. */
   approved: boolean;
-  /** Specific rule failures, if any. */
-  failures: string[];
+  /** Which rule refused, if any: "daily_limit" | "block_list" | "cooloff" | "slow_send" | "night_mode" | "friend_gate" | null. */
+  refusedBy: string | null;
+  /** Human-readable explanation of the result. */
+  message: string;
+  /**
+   * True when the preview failed for a reason that is NOT a rule rejection —
+   * e.g. an RPC failure, a missing ATA, a serialization problem, or an
+   * unrecognized on-chain error. When `error` is true, `refusedBy` is null and
+   * the UI should surface this as a problem to retry, not as a rule that blocked
+   * the send.
+   */
+  error?: boolean;
 }

@@ -5,12 +5,19 @@ anchor_version = "0.32.1"
 resolution = true
 skip-lint = false
 
+# Program IDs are identical across clusters by design — each is derived from its
+# deploy keypair and reused on every deploy. All 9 are deployed on devnet.
+
 [programs.localnet]
 stede_hook = "Cr1nytaygTvi4h73JhGacAJMbJsYxMvf7syQWpr6CYYv"
 stede_vault = "hkRnTeBdGovUyhC9TCvJjpkaQn7DWxo6YxhhAZ7Avai"
 stede_handle_registry = "FPpVV8GotRq2cPppWBp1juVun4SC193TpaEPodrmHYaA"
 stede_rule_daily_limit = "DnNcQGbcGtveExwz16oU9SheonBjADZiaExjC2W3CKi5"
 stede_rule_block_handle = "J1ZZNPoZXHb4qUS7TQKwxFnm9eBE7MFso7gnJkKrH2uq"
+stede_rule_cooloff = "4Cc51G1AnduEcwtYQTfUKNVmNnERmrBmUv7mCHRQSSUg"
+stede_rule_new_recipient_delay = "GWhPqirCmLHiYQdHsPXNzG2YexVR6cXsspps8YhPhaRb"
+stede_rule_time_window = "8AEdTE3avK5jhVy8osXHfZYnvtn73SSVrRxwuTaytaGu"
+stede_rule_friend_gate = "C2ETjCNkHYdPzNZxJtufmnc3j5at2osxG6csrS9StNk5"
 
 [programs.devnet]
 stede_hook = "Cr1nytaygTvi4h73JhGacAJMbJsYxMvf7syQWpr6CYYv"
@@ -18,6 +25,10 @@ stede_vault = "hkRnTeBdGovUyhC9TCvJjpkaQn7DWxo6YxhhAZ7Avai"
 stede_handle_registry = "FPpVV8GotRq2cPppWBp1juVun4SC193TpaEPodrmHYaA"
 stede_rule_daily_limit = "DnNcQGbcGtveExwz16oU9SheonBjADZiaExjC2W3CKi5"
 stede_rule_block_handle = "J1ZZNPoZXHb4qUS7TQKwxFnm9eBE7MFso7gnJkKrH2uq"
+stede_rule_cooloff = "4Cc51G1AnduEcwtYQTfUKNVmNnERmrBmUv7mCHRQSSUg"
+stede_rule_new_recipient_delay = "GWhPqirCmLHiYQdHsPXNzG2YexVR6cXsspps8YhPhaRb"
+stede_rule_time_window = "8AEdTE3avK5jhVy8osXHfZYnvtn73SSVrRxwuTaytaGu"
+stede_rule_friend_gate = "C2ETjCNkHYdPzNZxJtufmnc3j5at2osxG6csrS9StNk5"
 
 [registry]
 url = "https://api.apr.dev"

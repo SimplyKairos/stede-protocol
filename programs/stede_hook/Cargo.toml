@@ -26,6 +26,10 @@ spl-transfer-hook-interface = "0.10.0"
 spl-tlv-account-resolution = "0.10.0"
 stede_rule_daily_limit = { path = "../stede_rule_daily_limit", features = ["cpi"] }
 stede_rule_block_handle = { path = "../stede_rule_block_handle", features = ["cpi"] }
+stede_rule_cooloff = { path = "../stede_rule_cooloff", features = ["cpi"] }
+stede_rule_new_recipient_delay = { path = "../stede_rule_new_recipient_delay", features = ["cpi"] }
+stede_rule_time_window = { path = "../stede_rule_time_window", features = ["cpi"] }
+stede_rule_friend_gate = { path = "../stede_rule_friend_gate", features = ["cpi"] }
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(target_os, values("solana"))'] }

@@ -30,14 +30,23 @@ const DAILY_LIMIT_PROGRAM_ID = new PublicKey(
 const BLOCK_HANDLE_PROGRAM_ID = new PublicKey(
   "J1ZZNPoZXHb4qUS7TQKwxFnm9eBE7MFso7gnJkKrH2uq"
 );
+const COOLOFF_PROGRAM_ID = new PublicKey(
+  "4Cc51G1AnduEcwtYQTfUKNVmNnERmrBmUv7mCHRQSSUg"
+);
 const EXTRA_ACCOUNT_META_LIST_SEED = "extra-account-metas";
 const DAILY_LIMIT_SEED = "rule_daily_limit";
 const BLOCK_HANDLE_SEED = "rule_block_handle";
+const COOLOFF_SEED = "rule_cooloff";
 const DECIMALS = 6;
 const MINT_100_STEDE = new BN(100_000_000);
 const TRANSFER_50_STEDE = new BN(50_000_000);
 const GENEROUS_DAILY_LIMIT = new BN(1_000_000_000);
-const TINY_DAILY_LIMIT = new BN(30);
+const GENEROUS_COOLOFF_THRESHOLD = new BN("9999999999");
+const GENEROUS_COOLOFF_DURATION = new BN(1);
+// Genuine enforcement scenario: $5 cap, $6 over-limit, $3 within-limit.
+const FIVE_DOLLAR_CAP = new BN(5_000_000);
+const SIX_DOLLARS = new BN(6_000_000);
+const THREE_DOLLARS = new BN(3_000_000);
 const EXPECTED_HOOK_LOG = "stede_hook execute() invoked. CPIing into rules.";
 const EXPECTED_DAILY_LIMIT_LOG = "Daily limit rule passed.";
 const EXPECTED_BLOCK_LIST_LOG = "Block list rule passed.";
@@ -75,6 +84,7 @@ describe("stede_hook", function () {
   let hookProgram: Program;
   let dailyLimitProgram: Program;
   let blockHandleProgram: Program;
+  let cooloffProgram: Program;
   let initializedMintFixture: HookMintFixture;
 
   before(async function () {
@@ -87,6 +97,7 @@ describe("stede_hook", function () {
       BLOCK_HANDLE_PROGRAM_ID.toBase58(),
       provider
     );
+    cooloffProgram = await Program.at(COOLOFF_PROGRAM_ID.toBase58(), provider);
   });
 
   function deriveExtraAccountMetaList(stedeMint: PublicKey): PublicKey {
@@ -116,12 +127,53 @@ describe("stede_hook", function () {
     return blockList;
   }
 
+  function deriveCooloffPda(
+    sender: PublicKey,
+    stedeMint: PublicKey
+  ): PublicKey {
+    const [cooloff] = PublicKey.findProgramAddressSync(
+      [Buffer.from(COOLOFF_SEED), sender.toBuffer(), stedeMint.toBuffer()],
+      COOLOFF_PROGRAM_ID
+    );
+    return cooloff;
+  }
+
   function bnToBigInt(amount: BN): bigint {
     return BigInt(amount.toString());
   }
 
   async function sleep(ms: number): Promise<void> {
     await new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  // Public devnet RPC intermittently returns "Blockhash not found" / "node is
+  // behind" for setup txs. These are transient infra errors, not logic errors,
+  // so retry with a fresh blockhash before giving up.
+  async function withRetry<T>(
+    fn: () => Promise<T>,
+    label: string,
+    attempts = 5
+  ): Promise<T> {
+    let lastErr: unknown;
+    for (let i = 0; i < attempts; i += 1) {
+      try {
+        return await fn();
+      } catch (err) {
+        const msg = String((err as { message?: string })?.message ?? err);
+        const transient =
+          msg.includes("Blockhash not found") ||
+          msg.includes("node is behind") ||
+          msg.includes("block height exceeded") ||
+          msg.includes("Transaction was not confirmed");
+        if (!transient || i === attempts - 1) {
+          throw err;
+        }
+        lastErr = err;
+        console.log(`Retrying ${label} after transient error: ${msg}`);
+        await sleep(1000);
+      }
+    }
+    throw lastErr;
   }
 
   async function confirmTx(signature: string, label: string): Promise<void> {
@@ -157,10 +209,14 @@ describe("stede_hook", function () {
       TOKEN_2022_PROGRAM_ID
     );
 
-    const tx = await provider.sendAndConfirm(
-      new Transaction().add(createAccountIx, initTransferHookIx, initMintIx),
-      [stedeMint],
-      { commitment: "confirmed" }
+    const tx = await withRetry(
+      () =>
+        provider.sendAndConfirm(
+          new Transaction().add(createAccountIx, initTransferHookIx, initMintIx),
+          [stedeMint],
+          { commitment: "confirmed" }
+        ),
+      "Create Token-2022 mint with transfer hook"
     );
     await confirmTx(tx, "Create Token-2022 mint with transfer hook");
 
@@ -251,6 +307,24 @@ describe("stede_hook", function () {
     return addBlocked(fixture, Keypair.generate().publicKey, label);
   }
 
+  async function setGenerousCooloff(
+    fixture: HookMintFixture,
+    label = "Set generous cool-off"
+  ): Promise<string> {
+    const tx = await (cooloffProgram.methods as any)
+      .setCooloff(GENEROUS_COOLOFF_THRESHOLD, GENEROUS_COOLOFF_DURATION)
+      .accountsPartial({
+        sender: payer.publicKey,
+        stedeMint: fixture.stedeMint.publicKey,
+        cooloff: deriveCooloffPda(payer.publicKey, fixture.stedeMint.publicKey),
+        systemProgram: SystemProgram.programId,
+      })
+      .rpc();
+
+    await confirmTx(tx, label);
+    return tx;
+  }
+
   async function createTokenAccounts(
     fixture: HookMintFixture
   ): Promise<TokenAccountsFixture> {
@@ -283,10 +357,14 @@ describe("stede_hook", function () {
       TOKEN_2022_PROGRAM_ID
     );
 
-    const tx = await provider.sendAndConfirm(
-      new Transaction().add(createSenderAtaIx, createRecipientAtaIx),
-      [],
-      { commitment: "confirmed" }
+    const tx = await withRetry(
+      () =>
+        provider.sendAndConfirm(
+          new Transaction().add(createSenderAtaIx, createRecipientAtaIx),
+          [],
+          { commitment: "confirmed" }
+        ),
+      "Create Token-2022 ATAs"
     );
     await confirmTx(tx, "Create Token-2022 ATAs");
 
@@ -305,18 +383,22 @@ describe("stede_hook", function () {
       TOKEN_2022_PROGRAM_ID
     );
 
-    const tx = await provider.sendAndConfirm(
-      new Transaction().add(
-        createAssociatedTokenAccountInstruction(
-          payer.publicKey,
-          recipientAta,
-          recipientWallet,
-          fixture.stedeMint.publicKey,
-          TOKEN_2022_PROGRAM_ID
-        )
-      ),
-      [],
-      { commitment: "confirmed" }
+    const tx = await withRetry(
+      () =>
+        provider.sendAndConfirm(
+          new Transaction().add(
+            createAssociatedTokenAccountInstruction(
+              payer.publicKey,
+              recipientAta,
+              recipientWallet,
+              fixture.stedeMint.publicKey,
+              TOKEN_2022_PROGRAM_ID
+            )
+          ),
+          [],
+          { commitment: "confirmed" }
+        ),
+      label
     );
     await confirmTx(tx, label);
 
@@ -520,6 +602,7 @@ describe("stede_hook", function () {
         initializedMintFixture,
         "Create non-blocking block list"
       );
+      await setGenerousCooloff(initializedMintFixture);
 
       const tx = await transferWithHook(
         initializedMintFixture,
@@ -570,11 +653,11 @@ describe("stede_hook", function () {
       });
     });
 
-    it("transfer is refused when amount exceeds daily limit", async function () {
+    it("enforces a $5 cap: rejects $6, then allows $3", async function () {
       const limitedMintFixture = await createTransferHookMint();
       await initializeExtraAccountMetaList(
         limitedMintFixture,
-        "Initialize limited mint ExtraAccountMetaList"
+        "Initialize $5-cap mint ExtraAccountMetaList"
       );
       const tokenAccounts = await createTokenAccounts(limitedMintFixture);
       await mintStede(
@@ -584,25 +667,114 @@ describe("stede_hook", function () {
       );
       await setDailyLimit(
         limitedMintFixture,
-        TINY_DAILY_LIMIT,
-        "Set tiny daily limit"
+        FIVE_DOLLAR_CAP,
+        "Set $5 daily cap"
       );
       await createPassingBlockList(
         limitedMintFixture,
-        "Create block list before daily-limit failure"
+        "Create block list before $5-cap enforcement"
+      );
+      await setGenerousCooloff(
+        limitedMintFixture,
+        "Set cool-off before $5-cap enforcement"
       );
 
+      // $6 > $5 cap: must be rejected with DailyLimitExceeded, and because the
+      // hook CPI aborts the whole transfer, nothing is spent or moved.
       await expectDailyLimitExceeded(async () => {
         await transferWithHook(
           limitedMintFixture,
           tokenAccounts,
-          TRANSFER_50_STEDE,
-          "Transfer over tiny daily limit"
+          SIX_DOLLARS,
+          "Transfer $6 over $5 cap"
         );
       });
 
-      const dailyLimit = await fetchDailyLimit(limitedMintFixture);
-      expect(dailyLimit.spentToday.eq(new BN(0))).to.equal(true);
+      const afterRejection = await fetchDailyLimit(limitedMintFixture);
+      expect(
+        afterRejection.spentToday.eq(new BN(0)),
+        "rejected $6 transfer must not consume any daily allowance"
+      ).to.equal(true);
+      expect(
+        (await getTokenBalance(tokenAccounts.senderAta)).toString()
+      ).to.equal(MINT_100_STEDE.toString());
+      expect(
+        (await getTokenBalance(tokenAccounts.recipientAta)).toString()
+      ).to.equal("0");
+
+      // $3 <= $5 cap: must succeed, move funds, and record $3 spent.
+      await transferWithHook(
+        limitedMintFixture,
+        tokenAccounts,
+        THREE_DOLLARS,
+        "Transfer $3 within $5 cap"
+      );
+
+      const afterSuccess = await fetchDailyLimit(limitedMintFixture);
+      expect(
+        afterSuccess.spentToday.eq(THREE_DOLLARS),
+        "successful $3 transfer must record $3 spent"
+      ).to.equal(true);
+      expect(
+        (await getTokenBalance(tokenAccounts.senderAta)).toString()
+      ).to.equal(MINT_100_STEDE.sub(THREE_DOLLARS).toString());
+      expect(
+        (await getTokenBalance(tokenAccounts.recipientAta)).toString()
+      ).to.equal(THREE_DOLLARS.toString());
+    });
+
+    // Regression: a brand-new sender with NO rules configured must be able to
+    // send. The hook CPIs into all six rule programs unconditionally, so every
+    // rule must treat "unset / no config PDA" as auto-pass. Before the fix,
+    // daily_limit (first in the CPI order) rejected with AccountNotInitialized
+    // and blocked every first send — which the app mislabeled as "Night mode".
+    it("fresh account with NO rules set can send to another account", async function () {
+      const freshMintFixture = await createTransferHookMint();
+      await initializeExtraAccountMetaList(
+        freshMintFixture,
+        "Initialize no-rules ExtraAccountMetaList"
+      );
+      const tokenAccounts = await createTokenAccounts(freshMintFixture);
+      await mintStede(
+        freshMintFixture,
+        tokenAccounts.senderAta,
+        MINT_100_STEDE
+      );
+
+      // Intentionally configure NOTHING: no daily limit, no block list, no
+      // cool-off, no slow send, no night mode, no friend gate. Every rule must
+      // fail open, so the transfer should pass purely on auto-pass paths.
+      const tx = await transferWithHook(
+        freshMintFixture,
+        tokenAccounts,
+        THREE_DOLLARS,
+        "Fresh no-rules transfer"
+      );
+
+      const logs = await getTransactionLogs(tx);
+      expect(
+        logs.some((log) => log.includes(EXPECTED_HOOK_LOG)),
+        "hook must fire even when no rules are configured"
+      ).to.equal(true);
+
+      // The daily-limit PDA was never created, so it must not exist after a
+      // successful auto-pass transfer (the rule didn't write anything).
+      const dailyLimitPda = deriveDailyLimit(
+        payer.publicKey,
+        freshMintFixture.stedeMint.publicKey
+      );
+      expect(
+        await connection.getAccountInfo(dailyLimitPda, "confirmed"),
+        "unset daily-limit PDA must remain uncreated"
+      ).to.equal(null);
+
+      // Funds actually moved.
+      expect(
+        (await getTokenBalance(tokenAccounts.senderAta)).toString()
+      ).to.equal(MINT_100_STEDE.sub(THREE_DOLLARS).toString());
+      expect(
+        (await getTokenBalance(tokenAccounts.recipientAta)).toString()
+      ).to.equal(THREE_DOLLARS.toString());
     });
 
     it("transfer is refused when recipient is on the sender's block list", async function () {
@@ -645,6 +817,10 @@ describe("stede_hook", function () {
         blockedMintFixture,
         recipientA.publicKey,
         "Block recipient wallet"
+      );
+      await setGenerousCooloff(
+        blockedMintFixture,
+        "Set cool-off before block-list failure"
       );
 
       await expectRecipientBlocked(async () => {
@@ -701,6 +877,10 @@ describe("stede_hook", function () {
         allowedMintFixture,
         recipientA.publicKey,
         "Block a different recipient wallet"
+      );
+      await setGenerousCooloff(
+        allowedMintFixture,
+        "Set cool-off before allowed transfer"
       );
 
       const tx = await transferWithHook(

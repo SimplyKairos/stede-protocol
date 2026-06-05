@@ -16,4 +16,7 @@ pub enum BlockHandleError {
 
     #[msg("Cannot block the zero address.")]
     ZeroAddress,
+
+    #[msg("Block list config account is not the canonical PDA for its sender/mint.")]
+    InvalidConfigAccount,
 }

@@ -136,7 +136,7 @@ describe("stede_vault", function () {
     label = "Initialize vault"
   ): Promise<string> {
     const tx = await (program.methods as any)
-      .initializeVault()
+      .initializeVault("Stede USD", "stUSD", "")
       .accounts({
         admin: user,
         underlyingMint: fixture.underlyingMint,

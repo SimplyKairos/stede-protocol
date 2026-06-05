@@ -54,6 +54,19 @@ export function deriveReversePda(wallet: PublicKey): PublicKey {
   return pda;
 }
 
+export const STEDE_RULE_COOLOFF_PROGRAM_ID = new PublicKey(
+  "4Cc51G1AnduEcwtYQTfUKNVmNnERmrBmUv7mCHRQSSUg"
+);
+export const STEDE_RULE_NEW_RECIPIENT_DELAY_PROGRAM_ID = new PublicKey(
+  "GWhPqirCmLHiYQdHsPXNzG2YexVR6cXsspps8YhPhaRb"
+);
+export const STEDE_RULE_TIME_WINDOW_PROGRAM_ID = new PublicKey(
+  "8AEdTE3avK5jhVy8osXHfZYnvtn73SSVrRxwuTaytaGu"
+);
+export const STEDE_RULE_FRIEND_GATE_PROGRAM_ID = new PublicKey(
+  "C2ETjCNkHYdPzNZxJtufmnc3j5at2osxG6csrS9StNk5"
+);
+
 /** Daily limit PDA per (sender, stedeMint). */
 export function deriveDailyLimitPda(
   sender: PublicKey,
@@ -91,6 +104,72 @@ export function deriveExtraAccountMetaListPda(stedeMint: PublicKey): PublicKey {
   const [pda] = PublicKey.findProgramAddressSync(
     [Buffer.from("extra-account-metas"), stedeMint.toBuffer()],
     STEDE_HOOK_PROGRAM_ID
+  );
+  return pda;
+}
+
+/** Cool-off PDA per (sender, stedeMint). */
+export function deriveCooloffPda(
+  sender: PublicKey,
+  stedeMint: PublicKey
+): PublicKey {
+  const [pda] = PublicKey.findProgramAddressSync(
+    [Buffer.from("rule_cooloff"), sender.toBuffer(), stedeMint.toBuffer()],
+    STEDE_RULE_COOLOFF_PROGRAM_ID
+  );
+  return pda;
+}
+
+/** Slow Send config PDA per (sender, stedeMint). */
+export function deriveSlowSendConfigPda(
+  sender: PublicKey,
+  stedeMint: PublicKey
+): PublicKey {
+  const [pda] = PublicKey.findProgramAddressSync(
+    [Buffer.from("slow_send_config"), sender.toBuffer(), stedeMint.toBuffer()],
+    STEDE_RULE_NEW_RECIPIENT_DELAY_PROGRAM_ID
+  );
+  return pda;
+}
+
+/** Slow Send contact PDA per (sender, recipient, stedeMint). */
+export function deriveSlowSendContactPda(
+  sender: PublicKey,
+  recipient: PublicKey,
+  stedeMint: PublicKey
+): PublicKey {
+  const [pda] = PublicKey.findProgramAddressSync(
+    [
+      Buffer.from("slow_send_contact"),
+      sender.toBuffer(),
+      recipient.toBuffer(),
+      stedeMint.toBuffer(),
+    ],
+    STEDE_RULE_NEW_RECIPIENT_DELAY_PROGRAM_ID
+  );
+  return pda;
+}
+
+/** Night Mode (time window) config PDA per (sender, stedeMint). */
+export function deriveTimeWindowPda(
+  sender: PublicKey,
+  stedeMint: PublicKey
+): PublicKey {
+  const [pda] = PublicKey.findProgramAddressSync(
+    [Buffer.from("time_window"), sender.toBuffer(), stedeMint.toBuffer()],
+    STEDE_RULE_TIME_WINDOW_PROGRAM_ID
+  );
+  return pda;
+}
+
+/** Friend Gate config PDA per (sender, stedeMint). */
+export function deriveFriendGatePda(
+  sender: PublicKey,
+  stedeMint: PublicKey
+): PublicKey {
+  const [pda] = PublicKey.findProgramAddressSync(
+    [Buffer.from("rule_friend_gate"), sender.toBuffer(), stedeMint.toBuffer()],
+    STEDE_RULE_FRIEND_GATE_PROGRAM_ID
   );
   return pda;
 }

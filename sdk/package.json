@@ -1,6 +1,27 @@
 {
   "name": "@stede/sdk",
-  "version": "0.1.0",
-  "main": "src/index.ts",
-  "types": "src/index.ts"
+  "version": "0.3.5",
+  "description": "TypeScript SDK for the Stede protocol — consumer money rules on Solana.",
+  "license": "Apache-2.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "prepublishOnly": "npm run build"
+  },
+  "peerDependencies": {
+    "@coral-xyz/anchor": "^0.32.1",
+    "@solana/spl-token": "^0.4.14",
+    "@solana/web3.js": "^1.98.0",
+    "bn.js": "^5.2.1"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "buffer": "^6.0.3"
+  }
 }

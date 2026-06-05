@@ -1,6 +1,6 @@
 # Deployed Programs
 
-All 5 Stede programs are deployed to Solana devnet and verifiable on Solana Explorer.
+All 9 Stede programs are deployed to Solana devnet and verifiable on Solana Explorer.
 
 ## Program registry
 
@@ -11,6 +11,10 @@ All 5 Stede programs are deployed to Solana devnet and verifiable on Solana Expl
 | `stede_rule_daily_limit` | `DnNcQGbcGtveExwz16oU9SheonBjADZiaExjC2W3CKi5` | May 26, 2026 | [view](https://solscan.io/account/DnNcQGbcGtveExwz16oU9SheonBjADZiaExjC2W3CKi5?cluster=devnet) |
 | `stede_rule_block_handle` | `J1ZZNPoZXHb4qUS7TQKwxFnm9eBE7MFso7gnJkKrH2uq` | May 26, 2026 | [view](https://solscan.io/account/J1ZZNPoZXHb4qUS7TQKwxFnm9eBE7MFso7gnJkKrH2uq?cluster=devnet) |
 | `stede_handle_registry` | `FPpVV8GotRq2cPppWBp1juVun4SC193TpaEPodrmHYaA` | May 27, 2026 | [view](https://solscan.io/account/FPpVV8GotRq2cPppWBp1juVun4SC193TpaEPodrmHYaA?cluster=devnet) |
+| `stede_rule_cooloff` | `4Cc51G1AnduEcwtYQTfUKNVmNnERmrBmUv7mCHRQSSUg` | — | [view](https://solscan.io/account/4Cc51G1AnduEcwtYQTfUKNVmNnERmrBmUv7mCHRQSSUg?cluster=devnet) |
+| `stede_rule_new_recipient_delay` | `GWhPqirCmLHiYQdHsPXNzG2YexVR6cXsspps8YhPhaRb` | — | [view](https://solscan.io/account/GWhPqirCmLHiYQdHsPXNzG2YexVR6cXsspps8YhPhaRb?cluster=devnet) |
+| `stede_rule_time_window` | `8AEdTE3avK5jhVy8osXHfZYnvtn73SSVrRxwuTaytaGu` | — | [view](https://solscan.io/account/8AEdTE3avK5jhVy8osXHfZYnvtn73SSVrRxwuTaytaGu?cluster=devnet) |
+| `stede_rule_friend_gate` | `C2ETjCNkHYdPzNZxJtufmnc3j5at2osxG6csrS9StNk5` | — | [view](https://solscan.io/account/C2ETjCNkHYdPzNZxJtufmnc3j5at2osxG6csrS9StNk5?cluster=devnet) |
 
 All IDLs are uploaded on-chain and can be fetched with:
 
@@ -20,17 +24,21 @@ anchor idl fetch <PROGRAM_ID> --provider.cluster devnet
 
 ## Test coverage
 
-61 integration tests passing on devnet across all 5 programs:
+105 integration tests passing on devnet across all 9 programs:
 
-| Test file | Test count | Coverage |
-|---|---|---|
-| `tests/stede_vault.ts` | 12 | Wrap, unwrap, pause/unpause, accounting |
-| `tests/stede_hook.ts` | 7 | Hook initialization, transfer interception, composite rule CPI |
-| `tests/stede_rule_daily_limit.ts` | 7 | Limit setting, accumulation, rejection paths |
-| `tests/stede_rule_block_handle.ts` | 10 | Block list management, recipient checks |
-| `tests/stede_handle_registry.ts` | 14 | Handle claim/release/transfer, validation, anti-squat deposit |
-| `tests/stede_e2e.ts` | 11 | 9-step canonical user flow + 2 scaffolding steps |
-| **Total** | **61** | Full protocol surface, real devnet, ~11 min runtime |
+| Test file | Coverage |
+|---|---|
+| `tests/stede_vault.ts` | Wrap, unwrap, pause/unpause, accounting |
+| `tests/stede_hook.ts` | Hook initialization, transfer interception, multi-rule CPI |
+| `tests/stede_rule_daily_limit.ts` | Limit setting, accumulation, rejection paths |
+| `tests/stede_rule_block_handle.ts` | Block list management, recipient checks |
+| `tests/stede_rule_cooloff.ts` | Cool-off configuration, withdrawal delay enforcement |
+| `tests/stede_rule_new_recipient_delay.ts` | Slow send: first-send hold, recipient registration |
+| `tests/stede_rule_time_window.ts` | Night mode: in-window vs out-of-window sends |
+| `tests/stede_rule_friend_gate.ts` | Threshold gating, trusted-handle checks |
+| `tests/stede_handle_registry.ts` | Handle claim/release/transfer, validation, anti-squat deposit |
+| `tests/stede_e2e.ts` | Canonical user flow + scaffolding steps |
+| **Total** | **105 tests** — full protocol surface, real devnet |
 
 ## Run the test suite yourself
 

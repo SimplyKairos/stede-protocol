@@ -10,4 +10,7 @@ pub enum DailyLimitError {
 
     #[msg("Arithmetic overflow.")]
     Overflow,
+
+    #[msg("Daily limit config account is not the canonical PDA for its sender/mint.")]
+    InvalidConfigAccount,
 }

@@ -12,8 +12,17 @@ declare_id!("hkRnTeBdGovUyhC9TCvJjpkaQn7DWxo6YxhhAZ7Avai");
 pub mod stede_vault {
     use super::*;
 
-    pub fn initialize_vault(ctx: Context<InitializeVault>) -> Result<()> {
-        initialize_vault_handler(ctx)
+    pub fn initialize_vault(
+        ctx: Context<InitializeVault>,
+        name: String,
+        symbol: String,
+        uri: String,
+    ) -> Result<()> {
+        initialize_vault_handler(ctx, name, symbol, uri)
+    }
+
+    pub fn initialize_vault_hook(ctx: Context<InitializeVaultHook>) -> Result<()> {
+        initialize_vault_hook_handler(ctx)
     }
 
     pub fn wrap(ctx: Context<Wrap>, amount: u64) -> Result<()> {
